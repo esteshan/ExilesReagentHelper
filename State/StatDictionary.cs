@@ -17,6 +17,9 @@ public sealed class StatDictionary
         _source.TryGetValue(id, out var value) ? new Stat(true, value) : new Stat(false, 0);
 
     public bool Has(GameStat id) => _source.ContainsKey(id);
+
+    /// <summary>All stats present on the entity this frame. Useful for diagnostics/discovery.</summary>
+    public IReadOnlyDictionary<GameStat, int> All => _source;
 }
 
 /// <summary>Read-only view over an entity's named states (from its StateMachine component).</summary>
@@ -30,4 +33,7 @@ public sealed class StateDictionary
         _source.TryGetValue(id, out var value) ? new Stat(true, value) : new Stat(false, 0);
 
     public bool Has(string id) => _source.ContainsKey(id);
+
+    /// <summary>All states present on the entity this frame. Useful for diagnostics/discovery.</summary>
+    public IReadOnlyDictionary<string, int> All => _source;
 }

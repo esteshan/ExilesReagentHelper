@@ -50,6 +50,7 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
         DrawPlayerBuffsSection(state);
         DrawMonstersSection(state);
         DrawMonsterBuffsSection(state);
+        DrawMonsterStunSection(state);
         DrawSkillsSection(state);
         DrawFlasksSection(state);
     }
@@ -129,6 +130,85 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
         {
             ImGui.TextColored(Color.Gray.ToImguiVec4(), "Expand a monster to see its buff/debuff ids (closest first).");
             DrawMonsterBuffList(CaptureMonsterSnapshots(state));
+        }
+    }
+
+    // Stun discovery panel. "Primed for Stun" is NOT a buff/debuff, so it never shows in the buff
+    // tables above — it lives in the monster's GameStats and/or StateMachine states. This dumps the
+    // stun-related stats and all states for the targeted (or nearest) monster so we can see exactly
+    // which value flips when a monster becomes primed, then build a real condition off it.
+    private void DrawMonsterStunSection(GameState state)
+    {
+        if (!ImGui.CollapsingHeader("Stats & States — targeted / nearest monster"))
+        {
+            return;
+        }
+
+        var monsters = state.Monsters(Settings.MaxMonsterRange.Value).ToList();
+        // Prefer the monster under the cursor; otherwise the closest one (the list is closest-first).
+        var monster = monsters.FirstOrDefault(m => m.IsTargeted) ?? monsters.FirstOrDefault();
+        if (monster == null)
+        {
+            ImGui.TextColored(Color.Gray.ToImguiVec4(), "No monster in range. Get close to one (ideally hover/target it).");
+            return;
+        }
+
+        ImGui.Text($"{ShortName(monster.Path)}  [{monster.Rarity}]  ({monster.Distance:0} units)");
+        ImGui.TextColored(Color.Gray.ToImguiVec4(),
+            "Hit a monster until it's Primed for Stun and watch which value below changes.");
+
+        // Stun-related GameStats (thresholds, IsLightStunned/IsHeavyStunned, buildup, etc.).
+        var stunStats = monster.Stats.All
+            .Where(kv => kv.Key.ToString().Contains("stun", System.StringComparison.OrdinalIgnoreCase))
+            .OrderBy(kv => kv.Key.ToString())
+            .ToList();
+
+        ImGui.Spacing();
+        ImGui.Text($"Stun-related stats ({stunStats.Count}):");
+        if (stunStats.Count == 0)
+        {
+            ImGui.TextColored(Color.Gray.ToImguiVec4(), "none present");
+        }
+        else if (ImGui.BeginTable("stunStats", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("Stat");
+            ImGui.TableSetupColumn("Value");
+            ImGui.TableHeadersRow();
+            foreach (var kv in stunStats)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted(kv.Key.ToString());
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted(kv.Value.ToString());
+            }
+
+            ImGui.EndTable();
+        }
+
+        // StateMachine states — "Primed for Stun" is a likely candidate to surface here.
+        var states = monster.States.All.OrderBy(kv => kv.Key).ToList();
+        ImGui.Spacing();
+        ImGui.Text($"States ({states.Count}):");
+        if (states.Count == 0)
+        {
+            ImGui.TextColored(Color.Gray.ToImguiVec4(), "none present");
+        }
+        else if (ImGui.BeginTable("monStates", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("State");
+            ImGui.TableSetupColumn("Value");
+            ImGui.TableHeadersRow();
+            foreach (var kv in states)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted(kv.Key);
+                ImGui.TableNextColumn();
+                ImGui.TextUnformatted(kv.Value.ToString());
+            }
+
+            ImGui.EndTable();
         }
     }
 
