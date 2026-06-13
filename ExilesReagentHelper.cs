@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using ExileCore2;
+using ExileCore2.PoEMemory.Components;
 using ExileCore2.Shared.Enums;
 using ExileCore2.Shared.Helpers;
 using ExilesReagentHelper.State;
@@ -51,6 +52,36 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
     public override void Render()
     {
         // Per-frame automation (evaluate rules, press keys) will live here in a later step.
+
+        if (Settings.Enable.Value && Settings.DrawNearestMonsterLine.Value)
+        {
+            DrawNearestMonsterLine();
+        }
+    }
+
+    // Draws a line from the player to the nearest hostile monster, labelled with its distance.
+    private void DrawNearestMonsterLine()
+    {
+        var playerRender = GameController?.Player?.GetComponent<Render>();
+        if (playerRender == null)
+        {
+            return;
+        }
+
+        var state = new GameState(GameController, Settings.MaxMonsterRange);
+        var nearest = state.Monsters(Settings.MaxMonsterRange.Value).FirstOrDefault();
+        if (nearest == null)
+        {
+            return;
+        }
+
+        var camera = GameController.IngameState.Camera;
+        var from = camera.WorldToScreen(playerRender.Pos with { Z = playerRender.UnclampedHeight });
+        var to = camera.WorldToScreen(nearest.Position);
+
+        var color = Settings.NearestMonsterLineColor.Value;
+        Graphics.DrawLine(from, to, 2f, color);
+        Graphics.DrawTextWithBackground($"{nearest.Distance:0}", (from + to) / 2f, color, FontAlign.Center, Color.Black);
     }
 
     private void DrawStatePreview(GameState state)
