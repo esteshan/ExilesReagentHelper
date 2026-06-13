@@ -1,0 +1,6 @@
+# Build output
+bin/
+obj/
+
+# Loader-generated logs
+Errors.txt
