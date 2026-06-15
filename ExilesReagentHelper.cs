@@ -17,6 +17,10 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
     // Cap how many monsters the buff preview lists, so a big pack doesn't flood the panel.
     private const int MaxMonstersInBuffPreview = 15;
 
+    // When non-null, the player buff preview shows this frozen snapshot instead of live values,
+    // so brief / fast-ticking buffs and debuffs can actually be read.
+    private List<BuffRow> _frozenPlayerBuffs;
+
     // When non-null, the monster buff preview shows this frozen snapshot instead of live values,
     // so fast-changing debuffs (or monsters that die quickly) can actually be read.
     private List<MonsterSnapshot> _frozenMonsters;
@@ -109,7 +113,7 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
 
     private static void DrawVitalsSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Vitals", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Vitals", ImGuiTreeNodeFlags.None))
         {
             return;
         }
@@ -121,7 +125,7 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
 
     private void DrawPlayerSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Player", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Player", ImGuiTreeNodeFlags.None))
         {
             return;
         }
@@ -131,20 +135,35 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
         ImGui.Text($"Town: {state.IsInTown}    Hideout: {state.IsInHideout}    Peaceful: {state.IsInPeacefulArea}");
     }
 
-    private static void DrawPlayerBuffsSection(GameState state)
+    private void DrawPlayerBuffsSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Player buffs / debuffs", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Player buffs / debuffs", ImGuiTreeNodeFlags.None))
         {
             return;
         }
 
-        ImGui.TextColored(Color.Gray.ToImguiVec4(), "The \"Name\" column is the internal id you'll match in conditions.");
-        DrawBuffTable("playerBuffs", state.Buffs.AllBuffs.Select(ToBuffRow).ToList());
+        var frozen = _frozenPlayerBuffs != null;
+
+        // Freeze pauses the values so brief / fast-ticking buffs and debuffs can be read.
+        if (ImGui.Button(frozen ? "Unfreeze##playerBuffs" : "Freeze##playerBuffs"))
+        {
+            _frozenPlayerBuffs = frozen ? null : state.Buffs.AllBuffs.Select(ToBuffRow).ToList();
+            frozen = !frozen;
+        }
+
+        ImGui.SameLine();
+        ImGui.TextColored(
+            frozen ? Color.Orange.ToImguiVec4() : Color.Gray.ToImguiVec4(),
+            frozen
+                ? "Frozen snapshot — press Unfreeze for live values."
+                : "The \"Name\" column is the internal id you'll match in conditions.");
+
+        DrawBuffTable("playerBuffs", frozen ? _frozenPlayerBuffs : state.Buffs.AllBuffs.Select(ToBuffRow).ToList());
     }
 
     private void DrawMonstersSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Nearby monsters", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Nearby monsters", ImGuiTreeNodeFlags.None))
         {
             return;
         }
@@ -398,7 +417,7 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
 
     private static void DrawSkillsSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Slotted skills", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Slotted skills", ImGuiTreeNodeFlags.None))
         {
             return;
         }
@@ -445,7 +464,7 @@ public sealed class ExilesReagentHelper : BaseSettingsPlugin<ExilesReagentHelper
 
     private static void DrawFlasksSection(GameState state)
     {
-        if (!ImGui.CollapsingHeader("Flasks", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!ImGui.CollapsingHeader("Flasks", ImGuiTreeNodeFlags.None))
         {
             return;
         }
